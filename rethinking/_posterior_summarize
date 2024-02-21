@@ -1,0 +1,45 @@
+import numpy as np 
+import random 
+from scipy.stats import gaussian_kde
+import matplotlib.pyplot as plt
+
+ 
+def pi(samples: np.ndarray, alpha: float):
+    '''calculate posterior interval'''
+    lb,ub =  np.quantile(samples, [alpha/2, 1-alpha/2])
+    return lb, ub
+
+def hpdi(samples: np.ndarray, alpha: float, prob_intvl:float = 1e-4):
+    '''search the highest posterior density interval'''
+    lb_prob = alpha/2
+    ub_prob = lb_prob+1-alpha 
+    min_d_boundaries = 1
+    lb_hpdi, ub_hpdi = None, None
+    while ub_prob <1:
+        lb = np.quantile(samples, lb_prob)
+        ub = np.quantile(samples, ub_prob)
+        d_boundaries = ub - lb
+        
+        if min_d_boundaries > d_boundaries:
+            min_d_boundaries = d_boundaries
+            lb_hpdi, ub_hpdi = lb, ub 
+        
+        lb_prob += prob_intvl
+        ub_prob = lb_prob+1-alpha 
+        
+    return lb_hpdi, ub_hpdi
+    
+    
+def plot_interval(samples, lb, ub, p_grid, ax = None, **kwargs):
+    '''plot approximate dist from sampes and credibility interval'''
+    if not ax:    
+        fig, ax = plt.subplots(**kwargs)    
+    kernel = gaussian_kde(samples)
+    ax.plot(p_grid, kernel.pdf(p_grid), c = 'k')
+    x = np.linspace(start=lb, stop=ub, num=100)
+    ax.fill_between(x, kernel.pdf(x))
+    ax.set_ylim(0)
+    max_y = ax.get_ylim()[1]
+    vline_kwargs = dict(ls = '--', c = 'k',alpha = .9)
+    ax.axvline(x = ub, ymax= kernel.pdf(ub)/max_y , **vline_kwargs)
+    ax.axvline(x = lb, ymax= kernel.pdf(lb)/max_y, **vline_kwargs)
